@@ -1,2 +1,2 @@
-# First_Project
+# First Project
 A 2d digital twin for managing pechay crops
