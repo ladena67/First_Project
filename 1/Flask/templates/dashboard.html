@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>ESP32 Pechay Monitoring Dashboard</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+<body>
+
+<h1 class="title">ESP32 Pechay Monitoring Dashboard</h1>
+
+<div class="container">
+
+<div class="left">
+
+<h3>2D Digital Twin</h3>
+<img src="{{ url_for('static', filename='farm.png') }}">
+
+</div>
+
+<div class="right">
+
+<div class="chart-box">
+<canvas id="tempChart"></canvas>
+</div>
+
+<div class="chart-box">
+<canvas id="humidityChart"></canvas>
+</div>
+
+<div class="chart-box">
+<canvas id="lightChart"></canvas>
+</div>
+
+<div class="chart-box">
+<canvas id="soilChart"></canvas>
+</div>
+
+</div>
+
+</div>
+
+<div class="table-container">
+
+<h2>Sensor Data Table</h2>
+
+<table id="sensorTable">
+
+<thead>
+<tr>
+<th>Time</th>
+<th>Temperature (°C)</th>
+<th>Humidity (%)</th>
+<th>Light</th>
+<th>Soil Moisture</th>
+</tr>
+</thead>
+
+<tbody>
+</tbody>
+
+</table>
+
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+
+</html>
