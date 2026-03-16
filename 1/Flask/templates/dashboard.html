@@ -1,76 +1,135 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
-<title>ESP32 Pechay Monitoring Dashboard</title>
-
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    <title>ESP32 Pechay Monitoring Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
 
 <h1 class="title">ESP32 Pechay Monitoring Dashboard</h1>
 
-<div class="container">
+<div class="dashboard">
 
-<div class="left">
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
 
-<h3>2D Digital Twin</h3>
-<img src="{{ url_for('static', filename='default.png') }}">
+        <h3 class="twin-title">2D Digital Twin</h3>
+
+        <div class="digital-twin">
+
+            <img src="/static/images/pechay_01.png" alt="Digital Twin" class="digital-twin-image">
+
+            <!-- Temperature Flask -->
+            <div class="flask-container flask-container--left">
+                <span class="flask-title">Temp</span>
+                <div class="flask-tube">
+                    <div class="flask-fill" id="tempBar"></div>
+                    <div class="flask-ticks">
+                        <span>40°</span><span>35°</span><span>30°</span>
+                        <span>25°</span><span>20°</span><span>15°</span><span>10°</span>
+                    </div>
+                </div>
+                <div class="flask-bulb" id="tempBulb">
+                    <span class="temp-value-label"></span>
+                </div>
+            </div>
+
+            <!-- Humidity Flask -->
+            <div class="flask-container flask-container--right">
+                <span class="flask-title">Humidity</span>
+                <div class="flask-tube">
+                    <div class="flask-fill" id="humidityBar"></div>
+                    <div class="flask-ticks flask-ticks--right">
+                        <span>100%</span><span>80%</span><span>60%</span>
+                        <span>40%</span><span>20%</span><span>0%</span>
+                    </div>
+                </div>
+                <div class="flask-bulb" id="humidityBulb">
+                    <span class="humidity-value-label"></span>
+                </div>
+            </div>
+
+        </div>
+        <!-- END digital-twin -->
+
+        <!-- Recommendations -->
+        <div class="recommendations">
+            <div class="rec-card rec-temp">
+                <span class="rec-icon">🌡️</span>
+                <div class="rec-content">
+                    <span class="rec-label">Temperature</span>
+                    <span class="rec-status" id="recTemp">—</span>
+                </div>
+            </div>
+            <div class="rec-card rec-hum">
+                <span class="rec-icon">💧</span>
+                <div class="rec-content">
+                    <span class="rec-label">Humidity</span>
+                    <span class="rec-status" id="recHumidity">—</span>
+                </div>
+            </div>
+            <div class="rec-card rec-soil">
+                <span class="rec-icon">🌱</span>
+                <div class="rec-content">
+                    <span class="rec-label">Soil Moisture</span>
+                    <span class="rec-status" id="recSoil">—</span>
+                </div>
+            </div>
+            <div class="rec-card rec-light">
+                <span class="rec-icon">☀️</span>
+                <div class="rec-content">
+                    <span class="rec-label">Light Intensity</span>
+                    <span class="rec-status" id="recLight">—</span>
+                </div>
+            </div>
+        </div>
+        <!-- END recommendations -->
+
+    </div>
+    <!-- END left-panel -->
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+
+        <div class="charts">
+            <div class="chart-box">
+                <canvas id="tempChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <canvas id="humidityChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <canvas id="lightChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <canvas id="soilChart"></canvas>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <h2>Sensor Data Table</h2>
+            <table id="sensorTable">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Temperature (°C)</th>
+                        <th>Humidity (%)</th>
+                        <th>Light</th>
+                        <th>Soil Moisture</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+    </div>
+    <!-- END right-panel -->
 
 </div>
 
-<div class="right">
-
-<div class="chart-box">
-<canvas id="tempChart"></canvas>
-</div>
-
-<div class="chart-box">
-<canvas id="humidityChart"></canvas>
-</div>
-
-<div class="chart-box">
-<canvas id="lightChart"></canvas>
-</div>
-
-<div class="chart-box">
-<canvas id="soilChart"></canvas>
-</div>
-
-</div>
-
-</div>
-
-<div class="table-container">
-
-<h2>Sensor Data Table</h2>
-
-<table id="sensorTable">
-
-<thead>
-<tr>
-<th>Time</th>
-<th>Temperature (°C)</th>
-<th>Humidity (%)</th>
-<th>Light</th>
-<th>Soil Moisture</th>
-</tr>
-</thead>
-
-<tbody>
-</tbody>
-
-</table>
-
-</div>
-
-<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script src="/static/script.js"></script>
 
 </body>
-
 </html>
