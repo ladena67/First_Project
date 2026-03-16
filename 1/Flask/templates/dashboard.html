@@ -19,7 +19,35 @@
 
         <div class="digital-twin">
 
-            <img src="/static/images/pechay_01.png" alt="Digital Twin" class="digital-twin-image">
+            <img src="/static/images/soil_moist.png" alt="Digital Twin" class="digital-twin-image">
+            <img src="/static/images/pechay.png" alt="Pechay Plant" class="pechay-overlay">
+
+            <!-- Hover Tooltip -->
+            <div class="plant-tooltip" id="plantTooltip">
+                <div class="tooltip-title">🌿 Optimal Conditions</div>
+                <div class="tooltip-grid">
+                    <div class="tooltip-row">
+                        <span class="tooltip-icon">🌡️</span>
+                        <span class="tooltip-label">Temperature</span>
+                        <span class="tooltip-value">18°C – 22°C</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-icon">💧</span>
+                        <span class="tooltip-label">Humidity</span>
+                        <span class="tooltip-value">65% – 75%</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-icon">🌱</span>
+                        <span class="tooltip-label">Soil Moisture</span>
+                        <span class="tooltip-value">614 – 819 ADC</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-icon">☀️</span>
+                        <span class="tooltip-label">Light Intensity</span>
+                        <span class="tooltip-value">272 – 545 ADC</span>
+                    </div>
+                </div>
+            </div>
 
             <!-- Temperature Flask -->
             <div class="flask-container flask-container--left">
@@ -57,6 +85,7 @@
         <!-- Recommendations -->
         <div class="recommendations">
             <div class="rec-card rec-temp">
+                <span class="rec-warning"></span>
                 <span class="rec-icon">🌡️</span>
                 <div class="rec-content">
                     <span class="rec-label">Temperature</span>
@@ -64,6 +93,7 @@
                 </div>
             </div>
             <div class="rec-card rec-hum">
+                <span class="rec-warning"></span>
                 <span class="rec-icon">💧</span>
                 <div class="rec-content">
                     <span class="rec-label">Humidity</span>
@@ -71,6 +101,7 @@
                 </div>
             </div>
             <div class="rec-card rec-soil">
+                <span class="rec-warning"></span>
                 <span class="rec-icon">🌱</span>
                 <div class="rec-content">
                     <span class="rec-label">Soil Moisture</span>
@@ -78,6 +109,7 @@
                 </div>
             </div>
             <div class="rec-card rec-light">
+                <span class="rec-warning"></span>
                 <span class="rec-icon">☀️</span>
                 <div class="rec-content">
                     <span class="rec-label">Light Intensity</span>
