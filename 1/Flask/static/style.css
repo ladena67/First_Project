@@ -102,7 +102,9 @@ html, body {
     flex-direction: column;
     align-items: center;
     min-height: 0;
+    height: 100%;
     overflow: hidden;
+    box-sizing: border-box;
     background: var(--glass-mid);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -110,7 +112,6 @@ html, body {
     box-shadow: var(--shadow-card),
                 inset 0 1px 0 rgba(255,255,255,0.06);
 }
-
 .twin-title {
     margin: 0 0 10px 0;
     font-family: 'DM Serif Display', serif;
@@ -139,6 +140,7 @@ html, body {
 .digital-twin {
     flex: 1;
     min-height: 0;
+    /* remove max-height entirely */
     width: 100%;
     position: relative;
     border-radius: 12px;
@@ -177,7 +179,7 @@ html, body {
     transform: translateX(-50%);
     z-index: 1;
     cursor: pointer;
-    transition: opacity 0.3s ease, filter 1s ease;
+    transition: opacity 0.3s ease, filter 0.6s ease;
 }
 
 /* pechay plant overlay */
@@ -322,10 +324,12 @@ html, body {
     height: 220px;
     background: rgba(255,255,255,0.04);
     border: 1.5px solid rgba(255,255,255,0.2);
-    border-radius: 6px;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
     overflow: hidden;
     display: flex;
     align-items: flex-end;
+    transition: box-shadow 0.5s ease, border-color 0.5s ease;
 }
 
 .flask-tube::after {
@@ -378,14 +382,16 @@ html, body {
     height: 62px;
     border-radius: 50%;
     border: 1.5px solid rgba(255,255,255,0.2);
-    margin-top: -3px;
+    margin-top: -32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.5s ease, box-shadow 0.5s ease;
-    background: rgba(100, 100, 100, 0.4);
+    transition: background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease;
+    background: rgba(100, 100, 100, 1);
     box-shadow: 0 4px 16px rgba(0,0,0,0.3),
                 inset 0 1px 0 rgba(255,255,255,0.15);
+    position: relative;
+    z-index: 2;
 }
 
 .flask-bulb span {
@@ -400,29 +406,29 @@ html, body {
 /* RECOMMENDATIONS */
 .recommendations {
     width: 100%;
+    min-height: 120px;
     height: 18vh;
     flex-shrink: 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 6px;
-    margin-top: 10px;
+    gap: 4px;              /* ← was 6px */
+    margin-top: 6px;       /* ← was 10px */
     position: relative;
     z-index: 1;
+    box-sizing: border-box;
 }
-
 .rec-card {
     border-radius: 10px;
-    padding: 8px 12px;
+    padding: 0 10px;           /* ← was 6px 10px, remove vertical padding */
     display: flex;
-    align-items: center;
-    gap: 10px;
+    align-items: center;       /* ← back to center */
+    gap: 8px;
     overflow: hidden;
     border-left: 2px solid transparent;
     transition: transform 0.2s ease, box-shadow 0.25s ease;
     backdrop-filter: blur(8px);
 }
-
 .rec-card:hover { transform: translateY(-1px); }
 
 .rec-temp  { background: rgba(248, 113, 113, 0.1); border-left-color: var(--red);          }
@@ -436,9 +442,10 @@ html, body {
 .rec-light:hover { box-shadow: 0 0 16px rgba(251, 191, 36, 0.3),  0 0 32px rgba(251, 191, 36, 0.1);  }
 
 .rec-icon {
-    font-size: 20px;
+    font-size: 20px;       /* ← back to 20px */
     flex-shrink: 0;
     line-height: 1;
+    margin-top: 0;         /* ← remove margin */
 }
 
 .rec-content {
@@ -449,7 +456,7 @@ html, body {
 }
 
 .rec-label {
-    font-size: 11px;
+    font-size: 11px;       /* ← back to 11px */
     font-weight: 600;
     color: var(--text-dim);
     text-transform: uppercase;
@@ -457,7 +464,7 @@ html, body {
 }
 
 .rec-status {
-    font-size: 13px;
+    font-size: 13px;       /* ← back to 13px */
     font-weight: 500;
     color: var(--text-muted);
     white-space: nowrap;
@@ -468,6 +475,21 @@ html, body {
 .rec-status.good    { color: var(--green-accent); }
 .rec-status.warning { color: var(--amber);        }
 .rec-status.danger  { color: var(--red);          }
+
+.rec-values {
+    font-size: 11px;       /* ← was 10px */
+    font-weight: 500;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.2px;
+    margin-top: 1px;
+}
+
+.rec-values.good    { color: rgba(74,  222, 128, 0.7); }
+.rec-values.warning { color: rgba(251, 191, 36,  0.7); }
+.rec-values.danger  { color: rgba(248, 113, 113, 0.7); }
 
 /* WARNING INDICATOR */
 .rec-warning {

@@ -16,28 +16,75 @@ function formatSecond(timestamp){
            String(phDate.getSeconds()).padStart(2,'0');
 }
 
+/* FLASK GLOW */
+function getFlaskGlow(status) {
+    if (status === 'good')    return { shadow: '0 0 12px rgba(74,222,128,0.8), 0 0 32px rgba(74,222,128,0.4)', border: 'rgba(74,222,128,0.6)'  };
+    if (status === 'warning') return { shadow: '0 0 12px rgba(251,191,36,0.8), 0 0 32px rgba(251,191,36,0.4)',  border: 'rgba(251,191,36,0.6)'  };
+    if (status === 'danger')  return { shadow: '0 0 12px rgba(248,113,113,0.8), 0 0 32px rgba(248,113,113,0.4)', border: 'rgba(248,113,113,0.6)' };
+    return { shadow: 'none', border: 'rgba(255,255,255,0.2)' };
+}
+
+function applyFlaskGlow(tube, bulb, status) {
+    const glow = getFlaskGlow(status);
+    if (tube) {
+        tube.style.borderColor = glow.border;
+        tube.style.boxShadow   = glow.shadow;
+    }
+    if (bulb) {
+        bulb.style.borderColor = glow.border;
+        bulb.style.boxShadow   = `0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15), ${glow.shadow}`;
+    }
+}
+
 /* FLASK BARS */
-function updateTemperatureBar(temp){
+function updateTemperatureBar(temp, status) {
     const bar  = document.getElementById("tempBar");
     const bulb = document.getElementById("tempBulb");
+    const tube = bulb.previousElementSibling;
     const minTemp = 10, maxTemp = 40;
     let percent = (temp - minTemp) / (maxTemp - minTemp);
     percent = Math.max(0, Math.min(1, percent));
     bar.style.height      = (percent * 100) + "%";
     bar.style.background  = "#e74c3c";
-    bulb.style.background = "rgba(231, 76, 60, 0.85)";
+    bulb.style.background = "rgba(231, 76, 60, 1)";
     document.querySelector(".temp-value-label").textContent = temp + "°C";
+    applyFlaskGlow(tube, bulb, status);
 }
 
-function updateHumidityBar(humidity){
+function updateHumidityBar(humidity, status) {
     const bar  = document.getElementById("humidityBar");
     const bulb = document.getElementById("humidityBulb");
+    const tube = bulb.previousElementSibling;
     let percent = humidity / 100;
     percent = Math.max(0, Math.min(1, percent));
     bar.style.height      = (percent * 100) + "%";
     bar.style.background  = "#3498db";
-    bulb.style.background = "rgba(52, 152, 219, 0.85)";
+    bulb.style.background = "rgba(52, 152, 219, 1)";
     document.querySelector(".humidity-value-label").textContent = humidity + "%";
+    applyFlaskGlow(tube, bulb, status);
+}
+
+/* SOIL GLOW */
+function getSoilStatus(soil) {
+    if (soil < 410 || soil > 921) return 'danger';
+    if (soil >= 614 && soil <= 819) return 'good';
+    return 'warning';
+}
+
+function getSoilGlowFilter(status, brightness) {
+    if (status === 'good')    return `brightness(${brightness}) drop-shadow(0 0 10px rgba(74,222,128,0.9))  drop-shadow(0 0 24px rgba(74,222,128,0.5))`;
+    if (status === 'warning') return `brightness(${brightness}) drop-shadow(0 0 10px rgba(251,191,36,0.9))  drop-shadow(0 0 24px rgba(251,191,36,0.5))`;
+    if (status === 'danger')  return `brightness(${brightness}) drop-shadow(0 0 10px rgba(248,113,113,0.9)) drop-shadow(0 0 24px rgba(248,113,113,0.5))`;
+    return `brightness(${brightness})`;
+}
+
+function updateSoilGlow(soil) {
+    const image = document.querySelector(".digital-twin-image");
+    if (!image) return;
+    const status     = getSoilStatus(soil);
+    const brightness = document.querySelector(".digital-twin")?.style.getPropertyValue("--light-brightness") || "1";
+    image.style.filter     = getSoilGlowFilter(status, brightness);
+    image.style.transition = 'filter 0.6s ease';
 }
 
 /* DIGITAL TWIN LIGHTING */
@@ -78,10 +125,7 @@ function updateDigitalTwinLighting(light) {
     twin.style.setProperty("--overlay-gradient", overlayGradient);
     twin.style.transition = "all 1s ease";
 
-    if (image) {
-        image.style.filter     = `brightness(${brightness})`;
-        image.style.transition = "filter 1s ease";
-    }
+    /* pechay brightness only — soil image gets its own filter via updateSoilGlow */
     if (pechay) {
         pechay.style.filter     = `brightness(${brightness})`;
         pechay.style.transition = "filter 1s ease";
@@ -92,6 +136,8 @@ function updateDigitalTwinLighting(light) {
 function updateDigitalTwinSoilImage(soil) {
     const image = document.querySelector(".digital-twin-image");
     if (!image) return;
+
+    image.dataset.lastSoil = soil;
 
     let imageName;
     if (soil < 410)       imageName = "soil_dry";
@@ -151,15 +197,26 @@ function initPlantHover() {
         tooltip.style.transform = "translateX(-50%) scale(0.92)";
     }
 
-    function applyGlow() {
-        if (image)  image.style.filter  = "brightness(1.15) drop-shadow(0 0 12px rgba(74,222,128,0.5)) drop-shadow(0 0 24px rgba(74,222,128,0.2))";
+    function applyHoverGlow() {
+        /* pechay gets hover green glow */
         if (pechay) pechay.style.filter = "brightness(1.15) drop-shadow(0 0 16px rgba(74,222,128,0.6)) drop-shadow(0 0 32px rgba(74,222,128,0.25))";
+        /* pot keeps its soil status glow but brightens */
+        if (image) {
+            const soil       = parseFloat(image.dataset.lastSoil || "700");
+            const status     = getSoilStatus(soil);
+            image.style.filter = getSoilGlowFilter(status, 1.15);
+        }
     }
 
-    function removeGlow() {
+    function removeHoverGlow() {
         const brightness = twin.style.getPropertyValue("--light-brightness") || "1";
-        if (image)  image.style.filter  = `brightness(${brightness})`;
         if (pechay) pechay.style.filter = `brightness(${brightness})`;
+        /* restore soil glow at correct brightness */
+        if (image) {
+            const soil   = parseFloat(image.dataset.lastSoil || "700");
+            const status = getSoilStatus(soil);
+            image.style.filter = getSoilGlowFilter(status, brightness);
+        }
     }
 
     twin.addEventListener("mousemove", (e) => {
@@ -168,28 +225,24 @@ function initPlantHover() {
                         t.classList.contains("digital-twin-image");
 
         if (onPlant && !hovering) {
-            /* just entered — apply once */
             hovering = true;
             showTooltip();
-            applyGlow();
+            applyHoverGlow();
         } else if (!onPlant && hovering) {
-            /* just left plant area */
             hovering = false;
             hideTooltip();
-            removeGlow();
+            removeHoverGlow();
         }
-        /* if onPlant && hovering — mouse is still there, do nothing */
     });
 
     twin.addEventListener("mouseleave", () => {
         hovering = false;
         hideTooltip();
-        removeGlow();
+        removeHoverGlow();
     });
 
-    /* re-apply glow after each src swap since filter may reset */
     const observer = new MutationObserver(() => {
-        if (hovering) applyGlow();
+        if (hovering) applyHoverGlow();
     });
 
     if (pechay) {
@@ -200,12 +253,17 @@ function initPlantHover() {
 /* RECOMMENDATIONS */
 function updateRecommendations(temp, humidity, soil, light) {
 
-    function setRec(id, text, status) {
+    function setRec(id, valuesId, text, valuesText, status) {
         const el      = document.getElementById(id);
+        const valEl   = document.getElementById(valuesId);
         const card    = el.closest('.rec-card');
         const warning = card.querySelector('.rec-warning');
         el.textContent = text;
         el.className   = `rec-status ${status}`;
+        if (valEl) {
+            valEl.textContent = valuesText;
+            valEl.className   = `rec-values ${status}`;
+        }
         if (status === 'good') {
             warning.classList.remove('active', 'danger');
         } else if (status === 'warning') {
@@ -216,33 +274,33 @@ function updateRecommendations(temp, humidity, soil, light) {
         }
     }
 
-    /* temperature — optimal 18-22C, tolerable up to 34C */
-    if (temp < 18)       setRec('recTemp', 'Too cold — below 18°C',      'danger');
-    else if (temp <= 22) setRec('recTemp', 'Optimal range',               'good');
-    else if (temp <= 30) setRec('recTemp', 'Tolerable — monitor closely', 'warning');
-    else if (temp <= 34) setRec('recTemp', 'High — provide ventilation',  'warning');
-    else                 setRec('recTemp', 'Critical — heat stress risk',  'danger');
+    /* TEMPERATURE — optimal 18–22°C */
+    if (temp < 18)       setRec('recTemp', 'recTempValues', 'Too cold — below 18°C',      `Now: ${temp}°C | Optimal: 18°C – 22°C`, 'danger');
+    else if (temp <= 22) setRec('recTemp', 'recTempValues', 'Optimal range',               `Now: ${temp}°C | Optimal: 18°C – 22°C`, 'good');
+    else if (temp <= 30) setRec('recTemp', 'recTempValues', 'Tolerable — monitor closely', `Now: ${temp}°C | Optimal: 18°C – 22°C`, 'warning');
+    else if (temp <= 34) setRec('recTemp', 'recTempValues', 'High — provide ventilation',  `Now: ${temp}°C | Optimal: 18°C – 22°C`, 'warning');
+    else                 setRec('recTemp', 'recTempValues', 'Critical — heat stress risk',  `Now: ${temp}°C | Optimal: 18°C – 22°C`, 'danger');
 
-    /* humidity — optimal 65-75%, danger above 80% */
-    if (humidity < 50)        setRec('recHumidity', 'Too dry — mist or irrigate', 'danger');
-    else if (humidity < 65)   setRec('recHumidity', 'Low — increase moisture',    'warning');
-    else if (humidity <= 75)  setRec('recHumidity', 'Optimal range',              'good');
-    else if (humidity <= 80)  setRec('recHumidity', 'Slightly high — monitor',    'warning');
-    else                      setRec('recHumidity', 'Danger — fungal risk',        'danger');
+    /* HUMIDITY — optimal 65–75% */
+    if (humidity < 50)       setRec('recHumidity', 'recHumidityValues', 'Too dry — mist or irrigate', `Now: ${humidity}% | Optimal: 65% – 75%`, 'danger');
+    else if (humidity < 65)  setRec('recHumidity', 'recHumidityValues', 'Low — increase moisture',    `Now: ${humidity}% | Optimal: 65% – 75%`, 'warning');
+    else if (humidity <= 75) setRec('recHumidity', 'recHumidityValues', 'Optimal range',              `Now: ${humidity}% | Optimal: 65% – 75%`, 'good');
+    else if (humidity <= 80) setRec('recHumidity', 'recHumidityValues', 'Slightly high — monitor',    `Now: ${humidity}% | Optimal: 65% – 75%`, 'warning');
+    else                     setRec('recHumidity', 'recHumidityValues', 'Danger — fungal risk',        `Now: ${humidity}% | Optimal: 65% – 75%`, 'danger');
 
-    /* soil moisture — optimal 614-819 ADC (60-80%) */
-    if (soil < 410)       setRec('recSoil', 'Critical — water immediately', 'danger');
-    else if (soil < 614)  setRec('recSoil', 'Low — below field capacity',   'warning');
-    else if (soil <= 819) setRec('recSoil', 'Optimal range',                'good');
-    else if (soil <= 921) setRec('recSoil', 'High — reduce irrigation',     'warning');
-    else                  setRec('recSoil', 'Waterlogged — drainage needed', 'danger');
+    /* SOIL MOISTURE — optimal 614–819 ADC */
+    if (soil < 410)       setRec('recSoil', 'recSoilValues', 'Critical — water immediately', `Now: ${soil} | Optimal: 614 – 819 ADC`, 'danger');
+    else if (soil < 614)  setRec('recSoil', 'recSoilValues', 'Low — below field capacity',   `Now: ${soil} | Optimal: 614 – 819 ADC`, 'warning');
+    else if (soil <= 819) setRec('recSoil', 'recSoilValues', 'Optimal range',                `Now: ${soil} | Optimal: 614 – 819 ADC`, 'good');
+    else if (soil <= 921) setRec('recSoil', 'recSoilValues', 'High — reduce irrigation',     `Now: ${soil} | Optimal: 614 – 819 ADC`, 'warning');
+    else                  setRec('recSoil', 'recSoilValues', 'Waterlogged — drainage needed', `Now: ${soil} | Optimal: 614 – 819 ADC`, 'danger');
 
-    /* light intensity — optimal 272-545 ADC (~22,000 lux) */
-    if (light < 90)        setRec('recLight', 'Too dark — insufficient growth', 'danger');
-    else if (light < 272)  setRec('recLight', 'Low — below saturation point',   'warning');
-    else if (light <= 545) setRec('recLight', 'Optimal range',                  'good');
-    else if (light <= 727) setRec('recLight', 'High — monitor for stress',      'warning');
-    else                   setRec('recLight', 'Excessive — provide shade',       'danger');
+    /* LIGHT INTENSITY — optimal 272–545 ADC */
+    if (light < 90)        setRec('recLight', 'recLightValues', 'Too dark — insufficient growth', `Now: ${light} | Optimal: 272 – 545 ADC`, 'danger');
+    else if (light < 272)  setRec('recLight', 'recLightValues', 'Low — below saturation point',   `Now: ${light} | Optimal: 272 – 545 ADC`, 'warning');
+    else if (light <= 545) setRec('recLight', 'recLightValues', 'Optimal range',                  `Now: ${light} | Optimal: 272 – 545 ADC`, 'good');
+    else if (light <= 727) setRec('recLight', 'recLightValues', 'High — monitor for stress',      `Now: ${light} | Optimal: 272 – 545 ADC`, 'warning');
+    else                   setRec('recLight', 'recLightValues', 'Excessive — provide shade',       `Now: ${light} | Optimal: 272 – 545 ADC`, 'danger');
 }
 
 /* TABLE */
@@ -306,6 +364,19 @@ function createChart(canvasId, label, labels, tooltips, data, chartVar, setChart
     setChart(chart);
 }
 
+/* STATUS HELPERS */
+function getTempStatus(temp) {
+    if (temp < 18 || temp > 34) return 'danger';
+    if (temp <= 22)             return 'good';
+    return 'warning';
+}
+
+function getHumidityStatus(humidity) {
+    if (humidity < 50 || humidity > 80)      return 'danger';
+    if (humidity >= 65 && humidity <= 75)    return 'good';
+    return 'warning';
+}
+
 /* LOAD DATA */
 async function loadData(){
     const response = await fetch('/data');
@@ -324,12 +395,17 @@ async function loadData(){
     const latestSoil     = soils[soils.length - 1];
     const latestLight    = lights[lights.length - 1];
 
+    /* statuses computed AFTER latest values are defined */
+    const tempStatus     = getTempStatus(latestTemp);
+    const humidityStatus = getHumidityStatus(latestHumidity);
+
     updateTable(data);
-    updateTemperatureBar(latestTemp);
-    updateHumidityBar(latestHumidity);
+    updateTemperatureBar(latestTemp, tempStatus);
+    updateHumidityBar(latestHumidity, humidityStatus);
     updateRecommendations(latestTemp, latestHumidity, latestSoil, latestLight);
-    updateDigitalTwinLighting(500);
+    updateDigitalTwinLighting(latestLight);
     updateDigitalTwinSoilImage(latestSoil);
+    updateSoilGlow(latestSoil);
 
     createChart("tempChart",     "Temperature (°C)",   labels, tooltips, temps,  tempChart,     (c) => tempChart     = c, "#e67e22");
     createChart("humidityChart", "Humidity (%)",        labels, tooltips, hums,   humidityChart, (c) => humidityChart = c, "#3498db");
