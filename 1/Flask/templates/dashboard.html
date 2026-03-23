@@ -8,7 +8,13 @@
 
 <body>
 
-<h1 class="title">ESP32 Pechay Monitoring Dashboard</h1>
+<h1 class="title">
+    ESP32 Pechay Monitoring Dashboard
+    <button class="ref-guide-btn" id="refGuideBtn" title="Case Reference Guide">
+        <span class="ref-guide-btn__icon">📋</span>
+        <span class="ref-guide-btn__label">Case Reference</span>
+    </button>
+</h1>
 
 <div class="dashboard">
 
@@ -22,30 +28,23 @@
             <img src="/static/images/soil_moist.png" alt="Digital Twin" class="digital-twin-image">
             <img src="/static/images/pechay.png" alt="Pechay Plant" class="pechay-overlay">
 
-            <!-- Hover Tooltip -->
+            <!-- Hover Tooltip — dynamic case match -->
             <div class="plant-tooltip" id="plantTooltip">
-                <div class="tooltip-title">🌿 Optimal Conditions</div>
-                <div class="tooltip-grid">
-                    <div class="tooltip-row">
-                        <span class="tooltip-icon">🌡️</span>
-                        <span class="tooltip-label">Temperature</span>
-                        <span class="tooltip-value">18°C – 22°C</span>
+                <div class="tooltip-outcome-header" id="tooltipOutcomeHeader">
+                    <span class="tooltip-outcome-icon" id="tooltipOutcomeIcon">🔍</span>
+                    <span class="tooltip-outcome-label" id="tooltipOutcomeLabel">Possible Outcome</span>
+                    <span class="tooltip-outcome-dot"></span>
+                </div>
+                <div class="tooltip-case-img-wrap" id="tooltipImgWrap">
+                    <img id="tooltipCaseImg" src="" alt="" />
+                    <span class="tooltip-case-badge" id="tooltipCaseBadge"></span>
+                </div>
+                <div class="tooltip-case-meta">
+                    <div class="tooltip-case-header">
+                        <span class="tooltip-case-number" id="tooltipCaseNumber"></span>
+                        <span class="tooltip-case-name" id="tooltipCaseName"></span>
                     </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-icon">💧</span>
-                        <span class="tooltip-label">Humidity</span>
-                        <span class="tooltip-value">65% – 75%</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-icon">🌱</span>
-                        <span class="tooltip-label">Soil Moisture</span>
-                        <span class="tooltip-value">614 – 819 ADC</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-icon">☀️</span>
-                        <span class="tooltip-label">Light Intensity</span>
-                        <span class="tooltip-value">272 – 545 ADC</span>
-                    </div>
+                    <div class="tooltip-params" id="tooltipParams"></div>
                 </div>
             </div>
 
@@ -163,6 +162,58 @@
     </div>
     <!-- END right-panel -->
 
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     CASE REFERENCE GUIDE OVERLAY
+═══════════════════════════════════════════════ -->
+<div class="ref-overlay" id="refOverlay">
+    <div class="ref-panel">
+
+        <!-- Header -->
+        <div class="ref-header">
+            <div class="ref-header__left">
+                <span class="ref-header__icon">📋</span>
+                <div>
+                    <h2 class="ref-header__title">Case Reference Guide</h2>
+                    <p class="ref-header__sub">23 sensor condition cases · Light optimal: 350–550 ADC (~22,000 lux)</p>
+                </div>
+            </div>
+            <button class="ref-close-btn" id="refCloseBtn" title="Close">✕</button>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="ref-tabs">
+            <button class="ref-tab" data-tab="severe">
+                <span>🔴</span> Severe Cases <span class="ref-tab__count" id="severeCount">0</span>
+            </button>
+            <button class="ref-tab active" data-tab="nonsevere">
+                <span>🟡</span> Non-Severe Cases <span class="ref-tab__count" id="nonsevereCount">0</span>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="ref-content" id="refContent">
+            <!-- Dynamically populated by script.js -->
+        </div>
+
+        <!-- Legend -->
+        <div class="ref-legend">
+            <div class="ref-legend__item">
+                <span class="ref-legend__dot" style="background:var(--red)"></span>
+                <span>Danger — immediate action required</span>
+            </div>
+            <div class="ref-legend__item">
+                <span class="ref-legend__dot" style="background:var(--amber)"></span>
+                <span>Warning — monitor closely</span>
+            </div>
+            <div class="ref-legend__item">
+                <span class="ref-legend__dot" style="background:var(--green-accent)"></span>
+                <span>Optimal — all parameters in range</span>
+            </div>
+        </div>
+
+    </div>
 </div>
 
 <script src="/static/script.js"></script>
