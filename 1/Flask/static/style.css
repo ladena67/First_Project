@@ -198,14 +198,11 @@ html, body {
     background-image: url('/static/images/background.jpg');
     background-size: cover;
     background-position: center;
-    /* layer 1 — ambient darkness / vignette */
     --overlay-gradient: radial-gradient(ellipse at 50% 75%, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 100%);
-    /* layer 2 — directional light shaft from above */
     --light-shaft: none;
     --light-brightness: 1;
 }
 
-/* Layer 1: ambient darkness / vignette */
 .digital-twin::before {
     content: '';
     position: absolute;
@@ -217,8 +214,6 @@ html, body {
     border-radius: 12px;
 }
 
-/* Layer 2: radial light shaft / bloom from above
-   uses mix-blend-mode:screen so it only adds light, never darkens */
 .digital-twin::after {
     content: '';
     position: absolute;
@@ -231,7 +226,6 @@ html, body {
     mix-blend-mode: screen;
 }
 
-/* soil pot image */
 .digital-twin-image {
     width: 50%;
     height: 50%;
@@ -247,7 +241,6 @@ html, body {
     transition: opacity 0.3s ease, filter 0.6s ease;
 }
 
-/* pechay plant overlay */
 .pechay-overlay {
     position: absolute;
     bottom: 10%;
@@ -281,29 +274,28 @@ html, body {
     .pechay-overlay { animation: none; }
 }
 
-/* PLANT HOVER TOOLTIP — dynamic case match */
+/* PLANT HOVER TOOLTIP */
 .plant-tooltip {
     position: absolute;
     top: 10px;
     left: 50%;
     transform: translateX(-50%) scale(0.92);
-    background: rgba(4, 14, 9, 0.72);   
+    background: rgba(4, 14, 9, 0.72);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(74, 222, 128, 0.28);
     border-radius: 14px;
-    width: 310px;                        /* was 210px */
+    width: 310px;
     z-index: 20;
     pointer-events: none;
     opacity: 0;
     overflow: hidden;
     transition: opacity 0.25s ease, transform 0.25s ease;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.35),   /* softer shadow */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35),
                 0 0 0 1px rgba(0,0,0,0.25),
                 0 0 16px rgba(74, 222, 128, 0.05);
 }
 
-/* "Possible Outcome" header bar — base (optimal/normal) */
 .tooltip-outcome-header {
     display: flex;
     align-items: center;
@@ -316,7 +308,6 @@ html, body {
     transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-/* Warning state — amber tint */
 .tooltip-outcome-header.state-warning {
     background: linear-gradient(90deg,
         rgba(251, 191, 36, 0.22) 0%,
@@ -325,7 +316,6 @@ html, body {
     animation: warnHeaderPulse 2s ease-in-out infinite;
 }
 
-/* Danger / severe state — red pulse */
 .tooltip-outcome-header.state-danger {
     background: linear-gradient(90deg,
         rgba(248, 113, 113, 0.28) 0%,
@@ -363,7 +353,6 @@ html, body {
 .tooltip-outcome-header.state-warning .tooltip-outcome-label { color: var(--amber); }
 .tooltip-outcome-header.state-danger  .tooltip-outcome-label { color: var(--red);   }
 
-/* Pulsing dot beside label for warning/danger */
 .tooltip-outcome-dot {
     width: 6px;
     height: 6px;
@@ -387,10 +376,9 @@ html, body {
     animation: dangerFlash 0.7s ease-in-out infinite;
 }
 
-/* Case image inside tooltip */
 .tooltip-case-img-wrap {
     width: 100%;
-    aspect-ratio: 16 / 7;   /* was 4 / 3 — panoramic, less vertical space */
+    aspect-ratio: 16 / 7;
     position: relative;
     overflow: hidden;
     background: rgba(0,0,0,0.4);
@@ -404,7 +392,6 @@ html, body {
     transition: filter 0.4s ease;
 }
 
-/* Tooltip image inherits the same 5-state radial lighting as case cards */
 .tooltip-case-img-wrap::after {
     content: '';
     position: absolute;
@@ -414,44 +401,36 @@ html, body {
     transition: background 0.4s ease;
 }
 
-/* Tooltip image light classes — always clearly visible.
-   Only a subtle tint hints at the lighting condition.
-   Never dim the image — it's a reference card, not a simulation. */
 .tooltip-case-img-wrap.light-very-dark img,
 .tooltip-case-img-wrap.light-dim img,
 .tooltip-case-img-wrap.light-normal img,
 .tooltip-case-img-wrap.light-bright img,
 .tooltip-case-img-wrap.light-excessive img { filter: none; }
 
-/* Very dark — faint dark-blue corner tint only */
 .tooltip-case-img-wrap.light-very-dark::after {
     background:
         radial-gradient(ellipse 70% 55% at 50% 60%,
             rgba(0,0,0,0) 0%, rgba(0,10,20,0.18) 60%, rgba(0,5,15,0.32) 100%);
     mix-blend-mode: multiply;
 }
-/* Dim — very light cool-grey edge vignette */
 .tooltip-case-img-wrap.light-dim::after {
     background:
         radial-gradient(ellipse 75% 65% at 50% 60%,
             rgba(0,0,0,0) 0%, rgba(10,15,20,0.10) 55%, rgba(5,10,18,0.20) 100%);
     mix-blend-mode: multiply;
 }
-/* Normal — clean warm light shaft from top, barely visible */
 .tooltip-case-img-wrap.light-normal::after {
     background:
         radial-gradient(ellipse 45% 40% at 50% 0%,
             rgba(255,242,195,0.10) 0%, rgba(255,230,160,0.04) 55%, transparent 100%);
     mix-blend-mode: screen;
 }
-/* Bright — warm golden bloom from top */
 .tooltip-case-img-wrap.light-bright::after {
     background:
         radial-gradient(ellipse 60% 55% at 50% 0%,
             rgba(255,242,160,0.16) 0%, rgba(255,225,100,0.07) 50%, transparent 100%);
     mix-blend-mode: screen;
 }
-/* Excessive — soft warm overexposure bloom at top */
 .tooltip-case-img-wrap.light-excessive::after {
     background:
         radial-gradient(ellipse 75% 65% at 50% 0%,
@@ -484,21 +463,20 @@ html, body {
     color: var(--green-accent);
 }
 
-/* Meta section below image */
 .tooltip-case-meta {
     padding: 8px 11px 10px;
-    display: flex;          /* was block */
+    display: flex;
     gap: 10px;
     align-items: flex-start;
 }
 
 .tooltip-case-header {
-    flex: 1;               /* takes up left half */
+    flex: 1;
     min-width: 0;
-    margin-bottom: 0;      /* remove bottom margin */
+    margin-bottom: 0;
     padding-bottom: 0;
-    border-bottom: none;   /* remove divider — params are now beside, not below */
-    border-right: 1px solid rgba(255,255,255,0.07);  /* vertical divider instead */
+    border-bottom: none;
+    border-right: 1px solid rgba(255,255,255,0.07);
     padding-right: 8px;
 }
 
@@ -518,9 +496,8 @@ html, body {
     line-height: 1.25;
 }
 
-/* Param rows inside tooltip */
 .tooltip-params {
-    flex: 1;               /* takes up right half */
+    flex: 1;
 }
 
 .tooltip-param-row {
@@ -928,7 +905,6 @@ tbody tr:hover td {
     pointer-events: all;
 }
 
-/* Panel */
 .ref-panel {
     width: 92vw;
     max-width: 1100px;
@@ -954,7 +930,6 @@ tbody tr:hover td {
     transform: translateY(0) scale(1);
 }
 
-/* Header */
 .ref-header {
     display: flex;
     align-items: center;
@@ -1019,7 +994,6 @@ tbody tr:hover td {
     transform: rotate(90deg);
 }
 
-/* Tabs */
 .ref-tabs {
     display: flex;
     gap: 0;
@@ -1063,7 +1037,6 @@ tbody tr:hover td {
     color: var(--green-accent);
 }
 
-/* Scrollable content area */
 .ref-content {
     flex: 1;
     overflow-y: auto;
@@ -1078,7 +1051,6 @@ tbody tr:hover td {
 .ref-content::-webkit-scrollbar-track { background: transparent; }
 .ref-content::-webkit-scrollbar-thumb { background: rgba(74, 222, 128, 0.3); border-radius: 3px; }
 
-/* Section heading inside content */
 .ref-section-title {
     font-family: 'DM Serif Display', serif;
     font-size: 13px;
@@ -1090,14 +1062,12 @@ tbody tr:hover td {
     border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
-/* Case cards grid */
 .ref-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 14px;
 }
 
-/* Individual case card */
 .ref-case-card {
     border-radius: 12px;
     overflow: hidden;
@@ -1124,7 +1094,6 @@ tbody tr:hover td {
                 0 0 16px rgba(248, 113, 113, 0.15);
 }
 
-/* Image container */
 .ref-case-img-wrap {
     width: 100%;
     aspect-ratio: 4 / 3;
@@ -1145,14 +1114,12 @@ tbody tr:hover td {
     transform: scale(1.05);
 }
 
-/* On hover: restore full brightness for dark/dim cards so the plant is visible */
 .ref-case-card:hover .ref-case-img-wrap.light-very-dark img,
 .ref-case-card:hover .ref-case-img-wrap.light-dim img {
     filter: none;
     transition: filter 0.35s ease, transform 0.35s ease;
 }
 
-/* On hover: fade out the dark overlay so image shows clearly */
 .ref-case-card:hover .ref-case-img-wrap.light-very-dark::after,
 .ref-case-card:hover .ref-case-img-wrap.light-dim::after {
     background: radial-gradient(ellipse 55% 45% at 50% 65%,
@@ -1163,7 +1130,6 @@ tbody tr:hover td {
     mix-blend-mode: normal;
 }
 
-/* Severity badge on image */
 .ref-severity-badge {
     position: absolute;
     top: 8px;
@@ -1195,7 +1161,6 @@ tbody tr:hover td {
     color: var(--green-accent);
 }
 
-/* Card body */
 .ref-case-body {
     padding: 8px 10px 10px;
     display: flex;
@@ -1256,7 +1221,6 @@ tbody tr:hover td {
 .ref-param-value.warning { color: var(--amber);        }
 .ref-param-value.danger  { color: var(--red);          }
 
-/* Legend */
 .ref-legend {
     display: flex;
     align-items: center;
@@ -1282,7 +1246,6 @@ tbody tr:hover td {
     flex-shrink: 0;
 }
 
-/* Case card — visual appearance description */
 .ref-case-visual {
     font-size: 9px;
     color: var(--text-muted);
@@ -1293,7 +1256,6 @@ tbody tr:hover td {
     padding-top: 5px;
 }
 
-/* Case card — severity reason */
 .ref-case-reason {
     font-size: 9px;
     color: var(--text-dim);
@@ -1311,7 +1273,6 @@ tbody tr:hover td {
     opacity: 0.8;
 }
 
-/* Non-severe badge variant */
 .ref-severity-badge.nonsevere {
     background: rgba(74, 222, 128, 0.15);
     border: 1px solid rgba(74, 222, 128, 0.4);
@@ -1320,12 +1281,8 @@ tbody tr:hover td {
 
 /* ══════════════════════════════════════════════════════════
    CASE CARD IMAGE — 5-STATE RADIAL LIGHTING SYSTEM
-   Mirrors the digital twin lighting states exactly.
-   All overlays use ::after so the badge stays on top (z-index 2).
-   Light shaft uses mix-blend-mode: screen (adds light only).
 ══════════════════════════════════════════════════════════ */
 
-/* Shared overlay setup */
 .ref-case-img-wrap::after {
     content: '';
     position: absolute;
@@ -1336,7 +1293,6 @@ tbody tr:hover td {
     transition: background 0.4s ease;
 }
 
-/* ── 1. VERY DARK — near blackout, only faint centre visible ── */
 .ref-case-img-wrap.light-very-dark img {
     filter: brightness(0.28) saturate(0.45);
 }
@@ -1353,7 +1309,6 @@ tbody tr:hover td {
             rgba(0,0,0,0.55) 100%);
 }
 
-/* ── 2. DIM — soft vignette, cool blue-grey ambient ── */
 .ref-case-img-wrap.light-dim img {
     filter: brightness(0.60) saturate(0.72);
 }
@@ -1371,7 +1326,6 @@ tbody tr:hover td {
     mix-blend-mode: multiply;
 }
 
-/* ── 3. NORMAL / OPTIMAL — natural shaft from top, clean look ── */
 .ref-case-img-wrap.light-normal img {
     filter: none;
 }
@@ -1388,7 +1342,6 @@ tbody tr:hover td {
             transparent 100%);
 }
 
-/* ── 4. BRIGHT — strong warm shaft, wide bloom ── */
 .ref-case-img-wrap.light-bright img {
     filter: brightness(1.12) saturate(1.08) contrast(1.03);
 }
@@ -1410,7 +1363,6 @@ tbody tr:hover td {
     mix-blend-mode: screen;
 }
 
-/* ── 5. EXCESSIVE — blown-out top, harsh overexposure ── */
 .ref-case-img-wrap.light-excessive img {
     filter: brightness(1.30) saturate(1.18) contrast(1.06);
 }
@@ -1437,7 +1389,6 @@ tbody tr:hover td {
     mix-blend-mode: screen;
 }
 
-/* Keep badge always visible above the overlay */
 .ref-case-img-wrap .ref-severity-badge {
     z-index: 2;
 }
