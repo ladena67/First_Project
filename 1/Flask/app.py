@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template
+from datetime import datetime, timezone, timedelta
 import sqlite3
 
 app = Flask(__name__)
@@ -16,7 +17,7 @@ def init_db():
         humidity REAL,
         light INTEGER,
         soil INTEGER,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        timestamp DATETIME
     )
     """)
 
@@ -25,22 +26,24 @@ def init_db():
 
 init_db()
 
+def get_pht():
+    return datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
+
 @app.route("/")
 def dashboard():
     return render_template("dashboard.html")
 
 @app.route("/data", methods=["POST"])
 def receive_data():
-
     data = request.json
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO sensors (temperature, humidity, light, soil)
-        VALUES (?, ?, ?, ?)
-    """, (data["temperature"], data["humidity"], data["light"], data["soil"]))
+        INSERT INTO sensors (temperature, humidity, light, soil, timestamp)
+        VALUES (?, ?, ?, ?, ?)
+    """, (data["temperature"], data["humidity"], data["light"], data["soil"], get_pht()))
 
     conn.commit()
     conn.close()
@@ -49,7 +52,6 @@ def receive_data():
 
 @app.route("/data", methods=["GET"])
 def get_data():
-
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 

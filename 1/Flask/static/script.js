@@ -2,6 +2,7 @@
    CASE REFERENCE GUIDE DATA & LOGIC
    23 cases: 13 non-severe + 10 severe
    ADC scale: 0–4095 (ESP32 12-bit)
+   SOIL MOISTURE: 0 = wet/saturated, 4095 = dry
 ═══════════════════════════════════════════════════════════ */
 
 const CASE_DATA = [
@@ -294,9 +295,11 @@ const CASE_DATA = [
                       Danger: <18°C or >34°C
    Relative Humidity: Recommended 65–75% only
                       Danger: <55% or >80%
-   Soil Moisture    : Recommended 60–80% VWC = 2458–3277 ADC
-                      (ADC scale: 0=dry, 4095=saturated)
-                      Danger: <1638 ADC (<40%) or >3686 ADC (>90%)
+   Soil Moisture    : 0 = wet/saturated, 4095 = dry
+                      Recommended 60–80% VWC = ADC 819–1638
+                      (Low ADC = wet, High ADC = dry)
+                      Danger waterlogged: <=409 ADC  (<10% dry)
+                      Danger drought:     >2457 ADC  (>60% dry)
    Light Intensity  : Recommended ~22,000 lux = ~400 µmol/m²/s
                       ≈ 1400–2200 ADC optimal band
                       Compensation point ~400 ADC, stress >2720 ADC
@@ -319,12 +322,19 @@ const THRESHOLDS = {
         dangerHigh: 80     /* above = fungal danger        */
     },
     soil: {
-        dangerLow:  1638,  /* <40% VWC — critical drought  */
-        warnLow:    2458,  /* <60% VWC — below field cap   */
-        recLow:     2458,  /* 60% VWC                      */
-        recHigh:    3277,  /* 80% VWC                      */
-        warnHigh:   3686,  /* >80% VWC — excess water      */
-        dangerHigh: 3686   /* >90% VWC — waterlogged       */
+        /* INVERTED: 0 = wet/saturated, 4095 = dry
+           dangerLow  = waterlogged threshold (very low ADC = very wet)
+           warnLow    = excess water warning
+           recLow     = optimal wet boundary  (~80% VWC)
+           recHigh    = optimal dry boundary  (~60% VWC)
+           warnHigh   = getting dry, below field capacity
+           dangerHigh = critical drought                  */
+        dangerLow:   409,  /* <=409  ADC — waterlogged     */
+        warnLow:     819,  /* <=819  ADC — excess water    */
+        recLow:      819,  /* 819  ADC = ~80% VWC (moist)  */
+        recHigh:    1638,  /* 1638 ADC = ~60% VWC (field)  */
+        warnHigh:   2457,  /* >1638 ADC — below field cap  */
+        dangerHigh: 2457   /* >2457 ADC — critical drought */
     },
     light: {
         dangerLow:  400,   /* below compensation point     */
@@ -339,6 +349,17 @@ const THRESHOLDS = {
 /* Returns 'good' | 'warning' | 'danger' for any parameter + value */
 function getParamStatus(param, value) {
     const t = THRESHOLDS[param];
+
+    if (param === 'soil') {
+        /* INVERTED scale: low ADC = wet, high ADC = dry */
+        if (value <= t.dangerLow)  return 'danger';   /* waterlogged */
+        if (value <= t.warnLow)    return 'warning';  /* excess water */
+        if (value <= t.recHigh)    return 'good';     /* optimal range */
+        if (value <= t.warnHigh)   return 'warning';  /* getting dry */
+        return 'danger';                              /* critical drought */
+    }
+
+    /* All other params: low ADC = low value, high ADC = high value */
     if (value < t.dangerLow)  return 'danger';
     if (value < t.recLow)     return 'warning';
     if (value <= t.recHigh)   return 'good';
@@ -364,11 +385,12 @@ function getParamLabel(param, value) {
             if (s === 'warning' && value > t.recHigh)   return 'High — fungal risk increasing';
             return 'Danger — high fungal pathogen risk';
         case 'soil':
-            if (s === 'danger'  && value < t.dangerLow)  return 'Critical — water immediately';
-            if (s === 'warning' && value < t.recLow)     return 'Low — below field capacity (60%)';
+            /* INVERTED: low ADC = wet, high ADC = dry */
+            if (s === 'danger'  && value <= t.dangerLow) return 'Waterlogged — drainage needed';
+            if (s === 'warning' && value <= t.warnLow)   return 'High — reduce irrigation';
             if (s === 'good')                            return 'Within recommended range';
-            if (s === 'warning' && value > t.recHigh)   return 'High — reduce irrigation';
-            return 'Waterlogged — drainage needed';
+            if (s === 'warning' && value > t.recHigh)    return 'Low — below field capacity (60%)';
+            return 'Critical — water immediately';
         case 'light':
             if (s === 'danger'  && value < t.dangerLow)  return 'Too dark — below compensation point';
             if (s === 'warning' && value < t.recLow)     return 'Low — below saturation point';
@@ -383,19 +405,17 @@ function getParamSub(param, value) {
     switch (param) {
         case 'temp':     return `Now: ${value}°C | Recommended: 18°C – 30°C`;
         case 'humidity': return `Now: ${value}% | Recommended: 65% – 75%`;
-        case 'soil':     return `Now: ${value} ADC | Recommended: 2458–3277 ADC (60–80% VWC)`;
+        case 'soil':     return `Now: ${value} ADC | Recommended: 819–1638 ADC (60–80% VWC) | 0=wet, 4095=dry`;
         case 'light':    return `Now: ${value} ADC | Recommended: 1400–2200 ADC (~22,000 lux)`;
     }
 }
 
 /* ── Build case card HTML ─────────────────────────────── */
 
-/* Map a case's light label to one of 5 lighting state classes
-   ADC approximate values now use 4095-scale */
+/* Map a case's light label to one of 5 lighting state classes */
 function getCaseLightClass(c) {
     const lv = c.params.light.value.toLowerCase();
     const ls = c.params.light.status;
-    /* approximate ADC from label — 4095-scale */
     const adc = lv === 'low'  ? (ls === 'danger' ? 200  : 800)
               : lv === 'high' ? (ls === 'danger' ? 2880 : 2440)
               : 1800; /* normal / optimal */
@@ -501,16 +521,14 @@ let tempChart, humidityChart, lightChart, soilChart;
 
 function formatMinute(timestamp) {
     const d = new Date(timestamp);
-    const ph = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-    return String(ph.getHours()).padStart(2,'0') + ':' + String(ph.getMinutes()).padStart(2,'0');
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
 
 function formatSecond(timestamp) {
     const d = new Date(timestamp);
-    const ph = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-    return String(ph.getHours()).padStart(2,'0') + ':' +
-           String(ph.getMinutes()).padStart(2,'0') + ':' +
-           String(ph.getSeconds()).padStart(2,'0');
+    return String(d.getHours()).padStart(2,'0') + ':' +
+           String(d.getMinutes()).padStart(2,'0') + ':' +
+           String(d.getSeconds()).padStart(2,'0');
 }
 
 function getFlaskGlow(status) {
@@ -546,11 +564,9 @@ function updateHumidityBar(humidity, status) {
     applyFlaskGlow(tube, bulb, status);
 }
 
-/* getSoilStatus uses THRESHOLDS — now 4095-scale */
+/* getSoilStatus delegates to unified getParamStatus (inverted scale handled there) */
 function getSoilStatus(soil) {
-    if (soil < THRESHOLDS.soil.dangerLow || soil > THRESHOLDS.soil.dangerHigh) return 'danger';
-    if (soil >= THRESHOLDS.soil.recLow   && soil <= THRESHOLDS.soil.recHigh)   return 'good';
-    return 'warning';
+    return getParamStatus('soil', soil);
 }
 
 function getSoilGlowFilter(status, brightness) {
@@ -698,14 +714,15 @@ function updateDigitalTwinLighting(light) {
     if (pechay) { pechay.style.filter = `brightness(${brightness})`; pechay.style.transition = "filter 1.2s ease"; }
 }
 
-/* Soil image thresholds — 4095-scale */
+/* Soil image selection — INVERTED: low ADC = wet, high ADC = dry */
 function updateDigitalTwinSoilImage(soil) {
     const image = document.querySelector(".digital-twin-image");
     if (!image) return;
     image.dataset.lastSoil = soil;
-    const imageName = soil < THRESHOLDS.soil.dangerLow  ? "soil_dry"
-                    : soil <= THRESHOLDS.soil.recHigh   ? "soil_moist"
-                    : "soil_wet";
+    /* low ADC = wet/waterlogged, mid = moist, high ADC = dry */
+    const imageName = soil <= THRESHOLDS.soil.dangerLow  ? "soil_wet"
+                    : soil <= THRESHOLDS.soil.recHigh    ? "soil_moist"
+                    : "soil_dry";
     const newSrc = `/static/images/${imageName}.png`;
     if (!image.src.endsWith(newSrc)) {
         image.style.opacity = "0";
@@ -727,10 +744,13 @@ function startPechayAnimation() {
 }
 
 /* ── Match current readings to closest CASE_DATA entry ───
-   Category mapping (4095-scale for soil/light):
+   Category mapping:
      temp:     low(<18) | optimal(18-22) | tolerable(22-30) | high(>30)
      humidity: low(<65) | normal(65-75) | high(>75)
-     soil:     low(<2458) | normal(2458-3277) | high(>3277)
+     soil:     INVERTED — low ADC=wet(high moisture), high ADC=dry(low moisture)
+               high  (<= recHigh ADC, i.e. wet)
+               normal (recHigh < ADC <= warnHigh)
+               low   (> warnHigh ADC, i.e. dry)
      light:    low(<1400) | normal(1400-2200) | high(>2200)
 ─────────────────────────────────────────────────────────── */
 function matchCurrentCase(temp, humidity, soil, light) {
@@ -746,9 +766,10 @@ function matchCurrentCase(temp, humidity, soil, light) {
         return 'high';
     }
     function soilCat(v)  {
-        if (v < THRESHOLDS.soil.recLow)   return 'low';
-        if (v <= THRESHOLDS.soil.recHigh) return 'normal';
-        return 'high';
+        /* INVERTED: low ADC = wet (high moisture), high ADC = dry (low moisture) */
+        if (v <= THRESHOLDS.soil.dangerLow) return 'high';   /* waterlogged = very high moisture */
+        if (v <= THRESHOLDS.soil.recHigh)   return 'normal'; /* optimal moist range */
+        return 'low';                                         /* high ADC = dry = low moisture */
     }
     function lightCat(v) {
         if (v < THRESHOLDS.light.recLow)   return 'low';
@@ -864,7 +885,7 @@ function updateTooltipCase(c) {
 }
 
 /* Live sensor readings cache */
-const _liveReadings = { temp: 20, humidity: 70, soil: 2800, light: 1800 };
+const _liveReadings = { temp: 20, humidity: 70, soil: 1200, light: 1800 };
 
 function initPlantHover() {
     const image = document.querySelector(".digital-twin-image"), pechay = document.querySelector(".pechay-overlay");
@@ -877,12 +898,12 @@ function initPlantHover() {
 
     const applyGlow = () => {
         if (pechay) pechay.style.filter = "brightness(1.15) drop-shadow(0 0 16px rgba(74,222,128,0.6)) drop-shadow(0 0 32px rgba(74,222,128,0.25))";
-        if (image)  image.style.filter  = getSoilGlowFilter(getSoilStatus(parseFloat(image.dataset.lastSoil || "2800")), 1.15);
+        if (image)  image.style.filter  = getSoilGlowFilter(getSoilStatus(parseFloat(image.dataset.lastSoil || "1200")), 1.15);
     };
     const removeGlow = () => {
         const b = twin.style.getPropertyValue("--light-brightness") || "1";
         if (pechay) pechay.style.filter = `brightness(${b})`;
-        if (image)  image.style.filter  = getSoilGlowFilter(getSoilStatus(parseFloat(image.dataset.lastSoil || "2800")), b);
+        if (image)  image.style.filter  = getSoilGlowFilter(getSoilStatus(parseFloat(image.dataset.lastSoil || "1200")), b);
     };
 
     twin.addEventListener("mousemove", e => {
