@@ -4,6 +4,7 @@
    ADC scale: 0–4095 (ESP32 12-bit)
    SOIL MOISTURE: 0 = wet/saturated, 4095 = dry
 ═══════════════════════════════════════════════════════════ */
+let _isHovering = false;
 
 const CASE_DATA = [
     /* ── NON-SEVERE CASES (13) ──────────────────────────── */
@@ -583,6 +584,7 @@ function getSoilGlowFilter(status, brightness) {
 function updateSoilGlow(soil) {
     const image = document.querySelector(".digital-twin-image");
     if (!image) return;
+    if (_isHovering) return;   /* don't overwrite hover glow */
     const status     = getSoilStatus(soil);
     const brightness = document.querySelector(".digital-twin")?.style.getPropertyValue("--light-brightness") || "1";
     image.style.filter     = getSoilGlowFilter(status, brightness);
@@ -715,7 +717,7 @@ function updateDigitalTwinLighting(light) {
     twin.style.setProperty("--overlay-gradient", overlayGradient.replace(/\n\s+/g, " "));
     twin.style.setProperty("--light-shaft",      lightShaft.replace(/\n\s+/g, " "));
     twin.style.transition = "all 1.2s ease";
-    if (pechay) { pechay.style.filter = `brightness(${brightness})`; pechay.style.transition = "filter 1.2s ease"; }
+    if (pechay && !_isHovering) { pechay.style.filter = `brightness(${brightness})`; pechay.style.transition = "filter 1.2s ease"; }
 }
 
 /* Soil image selection — INVERTED: low ADC = wet, high ADC = dry */
@@ -898,7 +900,7 @@ function initPlantHover() {
     const twin    = document.querySelector(".digital-twin");
     if (!tooltip || !twin) return;
 
-    let hovering    = false;
+    // remove 'let hovering = false;' and use _isHovering instead
     let animInterval = null;
 
     /* ── Pechay animation frames (normal idle state) ── */
@@ -928,12 +930,13 @@ function initPlantHover() {
 
     function showCasePlant(c) {
         stopAnim();
-        savedFilter = pechay.style.filter;
         pechay.style.transition = 'opacity 0.25s ease';
         pechay.style.opacity = '0';
         setTimeout(() => {
             pechay.src = getCasePlantImage(c);
             pechay.style.opacity = '1';
+            /* reapply glow immediately after src swap */
+            if (_isHovering) applyGlow();
         }, 200);
     }
 
@@ -973,8 +976,8 @@ function initPlantHover() {
     twin.addEventListener("mousemove", e => {
         const on = e.target.classList.contains("pechay-overlay") ||
                    e.target.classList.contains("digital-twin-image");
-        if (on && !hovering) {
-            hovering = true;
+        if (on && !_isHovering) {
+            _isHovering = true;
             const matched = matchCurrentCase(
                 _liveReadings.temp, _liveReadings.humidity,
                 _liveReadings.soil, _liveReadings.light
@@ -983,8 +986,8 @@ function initPlantHover() {
             showCasePlant(matched);
             show();
             applyGlow();
-        } else if (!on && hovering) {
-            hovering = false;
+        } else if (!on && _isHovering) {
+            _isHovering = false;
             hide();
             removeGlow();
             restoreAnim();
@@ -992,8 +995,8 @@ function initPlantHover() {
     });
 
     twin.addEventListener("mouseleave", () => {
-        if (!hovering) return;
-        hovering = false;
+        if (!_isHovering) return;
+        _isHovering = false;
         hide();
         removeGlow();
         restoreAnim();
