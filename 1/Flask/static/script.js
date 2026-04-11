@@ -455,6 +455,10 @@ function buildCaseCard(c) {
         </div>
     </div>`;
 }
+function getCasePlantImage(c) {
+    const folder = c.severe ? 'SEVERE CASES' : 'NON-SEVERE CASES';
+    return `/static/images/cases/${folder}/case${c.id}/${c.id}.png`;
+}
 
 /* ── Tab cache — built once, reused on tab switches ──── */
 const _tabCache = {};
@@ -888,13 +892,73 @@ function updateTooltipCase(c) {
 const _liveReadings = { temp: 20, humidity: 70, soil: 1200, light: 1800 };
 
 function initPlantHover() {
-    const image = document.querySelector(".digital-twin-image"), pechay = document.querySelector(".pechay-overlay");
-    const tooltip = document.getElementById("plantTooltip"), twin = document.querySelector(".digital-twin");
+    const image   = document.querySelector(".digital-twin-image");
+    const pechay  = document.querySelector(".pechay-overlay");
+    const tooltip = document.getElementById("plantTooltip");
+    const twin    = document.querySelector(".digital-twin");
     if (!tooltip || !twin) return;
-    let hovering = false;
 
-    const show = () => { tooltip.style.opacity = "1"; tooltip.style.transform = "translateX(-50%) scale(1)"; };
-    const hide = () => { tooltip.style.opacity = "0"; tooltip.style.transform = "translateX(-50%) scale(0.92)"; };
+    let hovering    = false;
+    let animInterval = null;
+
+    /* ── Pechay animation frames (normal idle state) ── */
+    const frames = [
+        "/static/images/pechay.png",
+        "/static/images/pechay1.png",
+        "/static/images/pechay2.png",
+        "/static/images/pechay1.png"
+    ];
+    let frameIdx = 0;
+    let savedFilter = '';
+
+    function startAnim() {
+        if (animInterval) return;
+        animInterval = setInterval(() => {
+            frameIdx = (frameIdx + 1) % frames.length;
+            const cf = pechay.style.filter;
+            pechay.src = frames[frameIdx];
+            pechay.style.filter = cf;
+        }, 500);
+    }
+
+    function stopAnim() {
+        clearInterval(animInterval);
+        animInterval = null;
+    }
+
+    function showCasePlant(c) {
+        stopAnim();
+        savedFilter = pechay.style.filter;
+        pechay.style.transition = 'opacity 0.25s ease';
+        pechay.style.opacity = '0';
+        setTimeout(() => {
+            pechay.src = getCasePlantImage(c);
+            pechay.style.opacity = '1';
+        }, 200);
+    }
+
+    function restoreAnim() {
+        pechay.style.transition = 'opacity 0.25s ease';
+        pechay.style.opacity = '0';
+        setTimeout(() => {
+            frameIdx = 0;
+            pechay.src = frames[0];
+            pechay.style.opacity = '1';
+            startAnim();
+        }, 200);
+    }
+
+    /* Start idle animation immediately */
+    startAnim();
+
+    const show = () => {
+        tooltip.style.opacity = "1";
+        tooltip.style.transform = "translateX(-50%) scale(1)";
+    };
+    const hide = () => {
+        tooltip.style.opacity = "0";
+        tooltip.style.transform = "translateX(-50%) scale(0.92)";
+    };
 
     const applyGlow = () => {
         if (pechay) pechay.style.filter = "brightness(1.15) drop-shadow(0 0 16px rgba(74,222,128,0.6)) drop-shadow(0 0 32px rgba(74,222,128,0.25))";
@@ -907,7 +971,8 @@ function initPlantHover() {
     };
 
     twin.addEventListener("mousemove", e => {
-        const on = e.target.classList.contains("pechay-overlay") || e.target.classList.contains("digital-twin-image");
+        const on = e.target.classList.contains("pechay-overlay") ||
+                   e.target.classList.contains("digital-twin-image");
         if (on && !hovering) {
             hovering = true;
             const matched = matchCurrentCase(
@@ -915,16 +980,24 @@ function initPlantHover() {
                 _liveReadings.soil, _liveReadings.light
             );
             updateTooltipCase(matched);
+            showCasePlant(matched);
             show();
             applyGlow();
         } else if (!on && hovering) {
             hovering = false;
             hide();
             removeGlow();
+            restoreAnim();
         }
     });
-    twin.addEventListener("mouseleave", () => { hovering = false; hide(); removeGlow(); });
-    if (pechay) new MutationObserver(() => { if (hovering) applyGlow(); }).observe(pechay, { attributes: true, attributeFilter: ["src"] });
+
+    twin.addEventListener("mouseleave", () => {
+        if (!hovering) return;
+        hovering = false;
+        hide();
+        removeGlow();
+        restoreAnim();
+    });
 }
 
 function updateRecommendations(temp, humidity, soil, light) {
@@ -995,7 +1068,6 @@ async function loadData() {
 }
 
 /* INIT */
-startPechayAnimation();
 initPlantHover();
 initReferenceGuide();
 setInterval(loadData, 3000);
