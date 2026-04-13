@@ -1041,6 +1041,114 @@ function createChart(id, label, labels, tooltips, data, chartVar, setChart, colo
     }));
 }
 
+function updateEnvEdges(temp, humidity) {
+    const tempEdge  = document.getElementById('tempEdge');
+    const humidEdge = document.getElementById('humidEdge');
+    if (!tempEdge || !humidEdge) return;
+
+    const T = THRESHOLDS.temp;
+    const H = THRESHOLDS.humidity;
+
+    function applyEdge(el, gradient, borderSide, borderColor, height, pulse) {
+        el.style.height     = height + '%';
+        el.style.background = gradient;
+        el.style.boxShadow  = `inset ${borderSide} ${borderColor}`;
+        el.style.animation  = pulse ? `${el.dataset.anim} 1.2s ease-in-out infinite` : 'none';
+        el.classList.add('visible');
+    }
+
+    function applyOptimal(el, direction, border) {
+        el.style.height     = '10%';
+        el.style.background = `linear-gradient(to ${direction}, rgba(74,222,128,0.22) 0%, rgba(74,222,128,0.08) 40%, transparent 100%)`;
+        el.style.boxShadow  = `inset ${border} rgba(74,222,128,0.7)`;
+        el.style.animation  = 'optimalBreath 3s ease-in-out infinite';
+        el.classList.add('visible');
+    }
+
+    function clearEdge(el) {
+        el.classList.remove('visible');
+        el.style.height     = '0%';
+        el.style.background = 'none';
+        el.style.boxShadow  = 'none';
+        el.style.animation  = 'none';
+    }
+
+    /* ── TEMPERATURE (top edge) ── */
+    tempEdge.dataset.anim = 'edgePulseDanger';
+
+    if (temp > T.recHigh) {
+        const ratio  = Math.min((temp - T.recHigh) / 10, 1);
+        const height = 15 + ratio * 45;
+        const a1     = 0.30 + ratio * 0.50;
+        const a2     = 0.10 + ratio * 0.28;
+        const bA     = 0.60 + ratio * 0.40;
+        const bW     = Math.round(2 + ratio * 4);
+        tempEdge.dataset.anim = 'edgePulseDanger';
+        applyEdge(tempEdge,
+            `linear-gradient(to bottom, rgba(248,113,113,${a1}) 0%, rgba(248,113,113,${a2}) 35%, rgba(239,68,68,${a2*0.4}) 65%, transparent 100%)`,
+            `0 ${bW}px 0 0`, `rgba(248,113,113,${bA})`,
+            height, temp > T.dangerHigh
+        );
+
+    } else if (temp < T.dangerLow) {
+        const ratio  = Math.min((T.dangerLow - temp) / 10, 1);
+        const height = 15 + ratio * 45;
+        const a1     = 0.30 + ratio * 0.50;
+        const a2     = 0.10 + ratio * 0.28;
+        const bA     = 0.60 + ratio * 0.40;
+        const bW     = Math.round(2 + ratio * 4);
+        tempEdge.dataset.anim = 'edgePulseCold';
+        applyEdge(tempEdge,
+            `linear-gradient(to bottom, rgba(96,165,250,${a1}) 0%, rgba(96,165,250,${a2}) 35%, rgba(59,130,246,${a2*0.4}) 65%, transparent 100%)`,
+            `0 ${bW}px 0 0`, `rgba(96,165,250,${bA})`,
+            height, temp < T.dangerLow - 4
+        );
+
+    } else if (temp >= T.recLow && temp <= T.recHigh) {
+        applyOptimal(tempEdge, 'bottom', '0 2px 0 0');
+
+    } else {
+        clearEdge(tempEdge);
+    }
+
+    /* ── HUMIDITY (bottom edge) ── */
+    if (humidity > H.recHigh) {
+        const ratio  = Math.min((humidity - H.recHigh) / 20, 1);
+        const height = 12 + ratio * 45;
+        const a1     = 0.28 + ratio * 0.50;
+        const a2     = 0.10 + ratio * 0.28;
+        const bA     = 0.60 + ratio * 0.40;
+        const bW     = Math.round(2 + ratio * 4);
+        humidEdge.dataset.anim = 'edgePulseHumid';
+        applyEdge(humidEdge,
+            `linear-gradient(to top, rgba(34,211,238,${a1}) 0%, rgba(34,211,238,${a2}) 35%, rgba(6,182,212,${a2*0.4}) 65%, transparent 100%)`,
+            `0 -${bW}px 0 0`, `rgba(34,211,238,${bA})`,
+            height, humidity >= H.dangerHigh
+        );
+
+    } else if (humidity < H.recLow) {
+        const ratio  = Math.min((H.recLow - humidity) / 20, 1);
+        const height = 12 + ratio * 45;
+        const a1     = 0.28 + ratio * 0.50;
+        const a2     = 0.10 + ratio * 0.28;
+        const bA     = 0.60 + ratio * 0.40;
+        const bW     = Math.round(2 + ratio * 4);
+        humidEdge.dataset.anim = 'edgePulseDry';
+        applyEdge(humidEdge,
+            `linear-gradient(to top, rgba(251,191,36,${a1}) 0%, rgba(251,191,36,${a2}) 35%, rgba(245,158,11,${a2*0.4}) 65%, transparent 100%)`,
+            `0 -${bW}px 0 0`, `rgba(251,191,36,${bA})`,
+            height, humidity < H.dangerLow
+        );
+
+    } else if (humidity >= H.recLow && humidity <= H.recHigh) {
+        applyOptimal(humidEdge, 'top', '0 -2px 0 0');
+
+    } else {
+        clearEdge(humidEdge);
+    }
+}
+
+
 function getTempStatus(t)    { return getParamStatus('temp', t); }
 function getHumidityStatus(h){ return getParamStatus('humidity', h); }
 
@@ -1061,6 +1169,7 @@ async function loadData() {
     updateTemperatureBar(lT, getTempStatus(lT));
     updateHumidityBar(lH, getHumidityStatus(lH));
     updateRecommendations(lT, lH, lS, lL);
+    updateEnvEdges(lT, lH);
     updateDigitalTwinLighting(lL);
     updateDigitalTwinSoilImage(lS);
     updateSoilGlow(lS);
@@ -1068,6 +1177,8 @@ async function loadData() {
     createChart("humidityChart", "Humidity (%)",        labels, tooltips, hums,   humidityChart, c => humidityChart = c, "#3498db");
     createChart("lightChart",    "Light (ADC)",         labels, tooltips, lights, lightChart,    c => lightChart    = c, "#f1c40f");
     createChart("soilChart",     "Soil Moisture (ADC)", labels, tooltips, soils,  soilChart,     c => soilChart     = c, "#8b5a2b");
+
+    
 }
 
 /* INIT */
