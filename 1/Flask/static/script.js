@@ -1,9 +1,3 @@
-/* ═══════════════════════════════════════════════════════════
-   CASE REFERENCE GUIDE DATA & LOGIC
-   23 cases: 13 non-severe + 10 severe
-   ADC scale: 0–4095 (ESP32 12-bit)
-   SOIL MOISTURE: 0 = wet/saturated, 4095 = dry
-═══════════════════════════════════════════════════════════ */
 let _isHovering = false;
 
 const CASE_DATA = [
@@ -293,56 +287,65 @@ const CASE_DATA = [
    ADC range: 0–4095
 
    Air Temperature  : Recommended 20–34°C | Optimal 20–27°C
-                      Danger: <20°C or >34°C
+                      Warning:  18–19°C (low) | 35–37°C (high)
+                      Danger:   < 18°C        | > 38°C
                       Philippine tropical cultivars tolerate up to 34°C;
                       local varieties heat-adapted for lowland conditions.
-   Relative Humidity: Recommended 65–75% only
-                      Danger: <55% or >80%
+
+   Relative Humidity: Recommended 65–75%
+                      Warning:  50–64% (low) | 76–85% (high)
+                      Danger:   < 50%        | > 85%
                       Minimises Bacterial Soft Rot / Clubroot risk.
+
    Soil Moisture    : 0 = wet/saturated, 4095 = dry
                       Recommended 60–80% VWC = ADC 819–1638
-                      (Low ADC = wet, High ADC = dry)
-                      Danger waterlogged: <=409 ADC  (<10% dry)
-                      Danger drought:     >2457 ADC  (>60% dry)
+                      Warning:  40–59% VWC = ADC 1639–2457 (getting dry)
+                                81–90% VWC = ADC 410–818   (excess water)
+                      Danger:   > 90% VWC = ADC <= 409     (waterlogged)
+                                < 40% VWC = ADC > 2457     (critical drought)
                       Shallow-rooted crop; field capacity 60% lower threshold.
-   Light Intensity  : Recommended ~22,000 lux = ~400 µmol/m²/s
-                      ≈ 1400–2200 ADC optimal band
-                      Compensation point ~400 ADC, stress >2720 ADC
-                      Optimal saturation point for Brassica rapa biomass.
+
+   Light Intensity  : Recommended 18,000–24,000 lux ≈ ADC 1800–2400
+                      Warning:  10k–17k lux ≈ ADC 1000–1700 (low)
+                                25k–27k lux ≈ ADC 2500–2700 (high)
+                      Danger:   < 10k lux ≈ ADC < 1000      (too dark)
+                                > 27k lux ≈ ADC > 2700      (excessive)
+                      ADC↔lux ratio: ~0.1 ADC per lux (calibrated).
 ══════════════════════════════════════════════════════════════ */
 const THRESHOLDS = {
     temp: {
-        dangerLow:  20,    /* below = cold stress (<20°C)      */
+        dangerLow:  18,    /* below = critical cold (<18°C)    */
+        warnLow:    20,    /* 18–19°C = warning cold           */
         recLow:     20,    /* recommended range starts         */
         optHigh:    27,    /* optimal ceiling (midpoint)       */
         recHigh:    34,    /* recommended range ends           */
-        warnHigh:   34,    /* same as recHigh — no gap band    */
-        dangerHigh: 34     /* danger above 34°C                */
+        warnHigh:   38,    /* 35–37°C = warning hot            */
+        dangerHigh: 38     /* danger above 38°C                */
     },
     humidity: {
-        dangerLow:  55,    /* below = severe dry               */
-        warnLow:    65,    /* below recommended                */
+        dangerLow:  50,    /* below = critically dry (<50%)    */
+        warnLow:    65,    /* 50–64% = warning dry             */
         recLow:     65,    /* recommended range starts         */
         recHigh:    75,    /* recommended range ends           */
-        warnHigh:   80,    /* above recommended                */
-        dangerHigh: 80     /* above = fungal danger            */
+        warnHigh:   85,    /* 76–85% = warning humid           */
+        dangerHigh: 85     /* above = fungal danger (>85%)     */
     },
     soil: {
         /* INVERTED: 0 = wet/saturated, 4095 = dry             */
-        dangerLow:   409,  /* <=409  ADC — waterlogged         */
-        warnLow:     819,  /* <=819  ADC — excess water        */
-        recLow:      819,  /* 819  ADC = ~80% VWC (moist)      */
-        recHigh:    1638,  /* 1638 ADC = ~60% VWC (field cap)  */
-        warnHigh:   2457,  /* >1638 ADC — below field capacity */
-        dangerHigh: 2457   /* >2457 ADC — critical drought     */
+        dangerLow:   409,  /* <=409  ADC — waterlogged (>90% VWC wet) */
+        warnLow:     818,  /* 410–818 ADC — excess water (81–90% VWC) */
+        recLow:      819,  /* 819  ADC = ~80% VWC (moist upper limit) */
+        recHigh:    1638,  /* 1638 ADC = ~60% VWC (field capacity)    */
+        warnHigh:   2457,  /* 1639–2457 ADC — below field cap (40–59%)*/
+        dangerHigh: 2457   /* >2457 ADC — critical drought (<40% VWC) */
     },
     light: {
-        dangerLow:  400,   /* below compensation point         */
-        warnLow:    1400,  /* below optimal band               */
-        recLow:     1400,  /* ~16,000 lux                      */
-        recHigh:    2200,  /* ~22,000–25,000 lux (optimal)     */
-        warnHigh:   2720,  /* above saturation point           */
-        dangerHigh: 2720   /* >2720 ADC = light stress         */
+        dangerLow:  1000,  /* <1000 ADC  = <10k lux  — too dark       */
+        warnLow:    1800,  /* 1000–1700 ADC = 10k–17k lux (warning)   */
+        recLow:     1800,  /* 1800 ADC = ~18,000 lux (rec. starts)    */
+        recHigh:    2400,  /* 2400 ADC = ~24,000 lux (rec. ends)      */
+        warnHigh:   2700,  /* 2500–2700 ADC = 25k–27k lux (warning)   */
+        dangerHigh: 2700   /* >2700 ADC = >27k lux — excessive light  */
     }
 };
 
@@ -352,16 +355,16 @@ function getParamStatus(param, value) {
 
     if (param === 'soil') {
         /* INVERTED scale: low ADC = wet, high ADC = dry */
-        if (value <= t.dangerLow)  return 'danger';   /* waterlogged */
+        if (value <= t.dangerLow)  return 'danger';   /* waterlogged  */
         if (value <= t.warnLow)    return 'warning';  /* excess water */
-        if (value <= t.recHigh)    return 'good';     /* optimal range */
-        if (value <= t.warnHigh)   return 'warning';  /* getting dry */
-        return 'danger';                              /* critical drought */
+        if (value <= t.recHigh)    return 'good';     /* optimal      */
+        if (value <= t.warnHigh)   return 'warning';  /* getting dry  */
+        return 'danger';                              /* drought      */
     }
 
-    /* All other params: low value = low ADC, high value = high ADC */
+    /* All other params: low value = cold/dry/dark, high value = hot/humid/bright */
     if (value < t.dangerLow)  return 'danger';
-    if (value < t.recLow)     return 'warning';
+    if (value < t.warnLow)    return 'warning';
     if (value <= t.recHigh)   return 'good';
     if (value <= t.warnHigh)  return 'warning';
     return 'danger';
@@ -373,40 +376,41 @@ function getParamLabel(param, value) {
     const t = THRESHOLDS[param];
     switch (param) {
         case 'temp':
-            if (s === 'danger'  && value < t.dangerLow)  return 'Too cold — below 20°C';
+            if (s === 'danger'  && value < t.dangerLow)  return 'Critical — below 18°C, severe cold damage';
+            if (s === 'warning' && value < t.warnLow)    return 'Warning — cold stress (18–19°C)';
             if (s === 'good'   && value <= t.optHigh)    return 'Optimal range';
             if (s === 'good')                            return 'Within recommended range';
-            if (s === 'warning' && value > t.recHigh)   return 'High — above recommended range';
-            return 'Critical — heat stress risk above 34°C';
+            if (s === 'warning' && value > t.recHigh)    return 'Warning — heat stress risk (35–37°C)';
+            return 'Critical — severe heat stress above 38°C';
         case 'humidity':
-            if (s === 'danger'  && value < t.dangerLow)  return 'Critically dry — mist immediately';
-            if (s === 'warning' && value < t.recLow)     return 'Low — below recommended range';
+            if (s === 'danger'  && value < t.dangerLow)  return 'Critical — below 50%, mist immediately';
+            if (s === 'warning' && value < t.warnLow)    return 'Warning — low humidity (50–64%)';
             if (s === 'good')                            return 'Within recommended range';
-            if (s === 'warning' && value > t.recHigh)   return 'High — fungal risk increasing';
-            return 'Danger — high fungal pathogen risk';
+            if (s === 'warning' && value > t.recHigh)   return 'Warning — high humidity, fungal risk (76–85%)';
+            return 'Critical — extreme fungal pathogen risk above 85%';
         case 'soil':
             /* INVERTED: low ADC = wet, high ADC = dry */
-            if (s === 'danger'  && value <= t.dangerLow) return 'Waterlogged — drainage needed';
-            if (s === 'warning' && value <= t.warnLow)   return 'High — reduce irrigation';
-            if (s === 'good')                            return 'Within recommended range';
-            if (s === 'warning' && value > t.recHigh)    return 'Low — below field capacity (60%)';
-            return 'Critical — water immediately';
+            if (s === 'danger'  && value <= t.dangerLow) return 'Waterlogged — drainage needed (>90% VWC)';
+            if (s === 'warning' && value <= t.warnLow)   return 'Excess water — reduce irrigation (81–90% VWC)';
+            if (s === 'good')                            return 'Within recommended range (60–80% VWC)';
+            if (s === 'warning' && value > t.recHigh)    return 'Low — below field capacity (40–59% VWC)';
+            return 'Critical — water immediately (<40% VWC)';
         case 'light':
-            if (s === 'danger'  && value < t.dangerLow)  return 'Too dark — below compensation point';
-            if (s === 'warning' && value < t.recLow)     return 'Low — below saturation point';
-            if (s === 'good')                            return 'Within recommended range';
-            if (s === 'warning' && value > t.recHigh)   return 'High — above saturation point';
-            return 'Excessive — light stress risk';
+            if (s === 'danger'  && value < t.dangerLow)  return 'Critical — below 10,000 lux, too dark';
+            if (s === 'warning' && value < t.warnLow)    return 'Warning — low light (10k–17k lux)';
+            if (s === 'good')                            return 'Within recommended range (18k–24k lux)';
+            if (s === 'warning' && value > t.recHigh)   return 'Warning — above saturation (25k–27k lux)';
+            return 'Critical — excessive light stress above 27k lux';
     }
 }
 
 /* Subtitle string shown in recommendation cards */
 function getParamSub(param, value) {
     switch (param) {
-        case 'temp':     return `Now: ${value}°C | Recommended: 20°C – 34°C`;
-        case 'humidity': return `Now: ${value}% | Recommended: 65% – 75%`;
+        case 'temp':     return `Now: ${value}°C | Recommended: 20°C – 34°C | Warning: 18–19°C / 35–37°C | Danger: <18°C / >38°C`;
+        case 'humidity': return `Now: ${value}% | Recommended: 65% – 75% | Warning: 50–64% / 76–85% | Danger: <50% / >85%`;
         case 'soil':     return `Now: ${value} ADC | Recommended: 819–1638 ADC (60–80% VWC) | 0=wet, 4095=dry`;
-        case 'light':    return `Now: ${value} ADC | Recommended: 1400–2200 ADC (~22,000 lux)`;
+        case 'light':    return `Now: ${value} ADC | Recommended: 1800–2400 ADC (~18k–24k lux)`;
     }
 }
 
@@ -416,9 +420,9 @@ function getParamSub(param, value) {
 function getCaseLightClass(c) {
     const lv = c.params.light.value.toLowerCase();
     const ls = c.params.light.status;
-    const adc = lv === 'low'  ? (ls === 'danger' ? 200  : 800)
-              : lv === 'high' ? (ls === 'danger' ? 2880 : 2440)
-              : 1800; /* normal / optimal */
+    const adc = lv === 'low'  ? (ls === 'danger' ? 500   : 1300)
+              : lv === 'high' ? (ls === 'danger' ? 2900  : 2580)
+              : 2100; /* normal / optimal */
     if      (adc < THRESHOLDS.light.dangerLow)  return 'light-very-dark';
     else if (adc < THRESHOLDS.light.warnLow)    return 'light-dim';
     else if (adc <= THRESHOLDS.light.recHigh)   return 'light-normal';
@@ -602,6 +606,7 @@ function updateDigitalTwinLighting(light) {
     let brightness, overlayGradient, lightShaft;
 
     if (light < THRESHOLDS.light.dangerLow) {
+        /* < 1000 ADC — critically dark (<10k lux) */
         brightness    = 0.30;
         overlayGradient = `
             radial-gradient(ellipse 70% 55% at ${px} ${py},
@@ -616,6 +621,7 @@ function updateDigitalTwinLighting(light) {
         lightShaft = `none`;
 
     } else if (light < THRESHOLDS.light.warnLow) {
+        /* 1000–1799 ADC — warning low light (10k–17k lux) */
         brightness    = 0.62;
         overlayGradient = `
             radial-gradient(ellipse 80% 60% at ${px} ${py},
@@ -634,6 +640,7 @@ function updateDigitalTwinLighting(light) {
                 transparent 100%)`;
 
     } else if (light <= THRESHOLDS.light.recHigh) {
+        /* 1800–2400 ADC — recommended range (18k–24k lux) */
         brightness    = 1.0;
         overlayGradient = `
             radial-gradient(ellipse 60% 50% at ${px} ${py},
@@ -656,6 +663,7 @@ function updateDigitalTwinLighting(light) {
                 transparent 70%)`;
 
     } else if (light <= THRESHOLDS.light.warnHigh) {
+        /* 2401–2700 ADC — warning high light (25k–27k lux) */
         brightness    = 1.22;
         overlayGradient = `
             radial-gradient(ellipse 55% 45% at ${px} ${py},
@@ -682,6 +690,7 @@ function updateDigitalTwinLighting(light) {
                 transparent 100%)`;
 
     } else {
+        /* > 2700 ADC — excessive light (>27k lux) */
         brightness    = 1.50;
         overlayGradient = `
             radial-gradient(ellipse 50% 40% at ${px} ${py},
@@ -748,21 +757,21 @@ function startPechayAnimation() {
    temp:     low(<20) | optimal(20-27) | tolerable(27-34) | high(>34)
    humidity: low(<65) | normal(65-75) | high(>75)
    soil:     INVERTED — high moisture=low ADC, low moisture=high ADC
-   light:    low(<1400) | normal(1400-2200) | high(>2200)
+   light:    low(<1800) | normal(1800-2400) | high(>2400)
 ─────────────────────────────────────────────────────────── */
 function matchCurrentCase(temp, humidity, soil, light) {
-    function tempCat(v)  {
-        if (v < THRESHOLDS.temp.dangerLow)  return 'low';
-        if (v <= THRESHOLDS.temp.optHigh)   return 'optimal';
-        if (v <= THRESHOLDS.temp.recHigh)   return 'tolerable';
+    function tempCat(v) {
+        if (v < THRESHOLDS.temp.warnLow)   return 'low';
+        if (v <= THRESHOLDS.temp.optHigh)  return 'optimal';
+        if (v <= THRESHOLDS.temp.recHigh)  return 'tolerable';
         return 'high';
     }
-    function humCat(v)   {
+    function humCat(v) {
         if (v < THRESHOLDS.humidity.recLow)   return 'low';
         if (v <= THRESHOLDS.humidity.recHigh) return 'normal';
         return 'high';
     }
-    function soilCat(v)  {
+    function soilCat(v) {
         if (v <= THRESHOLDS.soil.dangerLow) return 'high';
         if (v <= THRESHOLDS.soil.recHigh)   return 'normal';
         return 'low';
@@ -881,7 +890,7 @@ function updateTooltipCase(c) {
 }
 
 /* Live sensor readings cache */
-const _liveReadings = { temp: 25, humidity: 70, soil: 1200, light: 1800 };
+const _liveReadings = { temp: 25, humidity: 70, soil: 1200, light: 2100 };
 
 function initPlantHover() {
     const image   = document.querySelector(".digital-twin-image");
@@ -1061,32 +1070,63 @@ function updateEnvEdges(temp, humidity) {
     /* ── TEMPERATURE (top edge) ── */
     tempEdge.dataset.anim = 'edgePulseDanger';
 
-    if (temp > T.recHigh) {
-        const ratio  = Math.min((temp - T.recHigh) / 10, 1);
+    if (temp >= T.dangerHigh) {
+        /* > 38°C — critical danger */
+        const ratio  = Math.min((temp - T.dangerHigh) / 10, 1);
         const height = 15 + ratio * 45;
-        const a1     = 0.30 + ratio * 0.50;
-        const a2     = 0.10 + ratio * 0.28;
-        const bA     = 0.60 + ratio * 0.40;
-        const bW     = Math.round(2 + ratio * 4);
+        const a1     = 0.50 + ratio * 0.30;
+        const a2     = 0.20 + ratio * 0.18;
+        const bA     = 0.80 + ratio * 0.20;
+        const bW     = Math.round(4 + ratio * 4);
         tempEdge.dataset.anim = 'edgePulseDanger';
         applyEdge(tempEdge,
             `linear-gradient(to bottom, rgba(248,113,113,${a1}) 0%, rgba(248,113,113,${a2}) 35%, rgba(239,68,68,${a2*0.4}) 65%, transparent 100%)`,
             `0 ${bW}px 0 0`, `rgba(248,113,113,${bA})`,
-            height, temp > T.dangerHigh
+            height, true
+        );
+
+    } else if (temp > T.recHigh) {
+        /* 35–37°C — warning hot */
+        const ratio  = Math.min((temp - T.recHigh) / (T.dangerHigh - T.recHigh), 1);
+        const height = 12 + ratio * 20;
+        const a1     = 0.25 + ratio * 0.25;
+        const a2     = 0.08 + ratio * 0.12;
+        const bA     = 0.50 + ratio * 0.30;
+        const bW     = Math.round(2 + ratio * 2);
+        applyEdge(tempEdge,
+            `linear-gradient(to bottom, rgba(251,191,36,${a1}) 0%, rgba(251,191,36,${a2}) 35%, rgba(245,158,11,${a2*0.4}) 65%, transparent 100%)`,
+            `0 ${bW}px 0 0`, `rgba(251,191,36,${bA})`,
+            height, false
         );
 
     } else if (temp < T.dangerLow) {
+        /* < 18°C — critical cold */
         const ratio  = Math.min((T.dangerLow - temp) / 10, 1);
         const height = 15 + ratio * 45;
-        const a1     = 0.30 + ratio * 0.50;
-        const a2     = 0.10 + ratio * 0.28;
-        const bA     = 0.60 + ratio * 0.40;
-        const bW     = Math.round(2 + ratio * 4);
+        const a1     = 0.50 + ratio * 0.30;
+        const a2     = 0.20 + ratio * 0.18;
+        const bA     = 0.80 + ratio * 0.20;
+        const bW     = Math.round(4 + ratio * 4);
         tempEdge.dataset.anim = 'edgePulseCold';
         applyEdge(tempEdge,
             `linear-gradient(to bottom, rgba(96,165,250,${a1}) 0%, rgba(96,165,250,${a2}) 35%, rgba(59,130,246,${a2*0.4}) 65%, transparent 100%)`,
             `0 ${bW}px 0 0`, `rgba(96,165,250,${bA})`,
-            height, temp < T.dangerLow - 4
+            height, true
+        );
+
+    } else if (temp < T.warnLow) {
+        /* 18–19°C — warning cold */
+        const ratio  = Math.min((T.warnLow - temp) / (T.warnLow - T.dangerLow), 1);
+        const height = 10 + ratio * 15;
+        const a1     = 0.20 + ratio * 0.20;
+        const a2     = 0.06 + ratio * 0.10;
+        const bA     = 0.40 + ratio * 0.25;
+        const bW     = Math.round(2 + ratio * 2);
+        tempEdge.dataset.anim = 'edgePulseCold';
+        applyEdge(tempEdge,
+            `linear-gradient(to bottom, rgba(147,197,253,${a1}) 0%, rgba(147,197,253,${a2}) 35%, rgba(96,165,250,${a2*0.4}) 65%, transparent 100%)`,
+            `0 ${bW}px 0 0`, `rgba(147,197,253,${bA})`,
+            height, false
         );
 
     } else if (temp >= T.recLow && temp <= T.recHigh) {
@@ -1097,32 +1137,64 @@ function updateEnvEdges(temp, humidity) {
     }
 
     /* ── HUMIDITY (bottom edge) ── */
-    if (humidity > H.recHigh) {
-        const ratio  = Math.min((humidity - H.recHigh) / 20, 1);
-        const height = 12 + ratio * 45;
-        const a1     = 0.28 + ratio * 0.50;
-        const a2     = 0.10 + ratio * 0.28;
-        const bA     = 0.60 + ratio * 0.40;
-        const bW     = Math.round(2 + ratio * 4);
+    if (humidity >= H.dangerHigh) {
+        /* > 85% — critical danger */
+        const ratio  = Math.min((humidity - H.dangerHigh) / 15, 1);
+        const height = 15 + ratio * 45;
+        const a1     = 0.50 + ratio * 0.30;
+        const a2     = 0.20 + ratio * 0.18;
+        const bA     = 0.80 + ratio * 0.20;
+        const bW     = Math.round(4 + ratio * 4);
         humidEdge.dataset.anim = 'edgePulseHumid';
         applyEdge(humidEdge,
             `linear-gradient(to top, rgba(34,211,238,${a1}) 0%, rgba(34,211,238,${a2}) 35%, rgba(6,182,212,${a2*0.4}) 65%, transparent 100%)`,
             `0 -${bW}px 0 0`, `rgba(34,211,238,${bA})`,
-            height, humidity >= H.dangerHigh
+            height, true
+        );
+
+    } else if (humidity > H.recHigh) {
+        /* 76–85% — warning humid */
+        const ratio  = Math.min((humidity - H.recHigh) / (H.dangerHigh - H.recHigh), 1);
+        const height = 10 + ratio * 20;
+        const a1     = 0.22 + ratio * 0.28;
+        const a2     = 0.08 + ratio * 0.12;
+        const bA     = 0.45 + ratio * 0.35;
+        const bW     = Math.round(2 + ratio * 2);
+        humidEdge.dataset.anim = 'edgePulseHumid';
+        applyEdge(humidEdge,
+            `linear-gradient(to top, rgba(34,211,238,${a1}) 0%, rgba(34,211,238,${a2}) 35%, rgba(6,182,212,${a2*0.4}) 65%, transparent 100%)`,
+            `0 -${bW}px 0 0`, `rgba(34,211,238,${bA})`,
+            height, false
+        );
+
+    } else if (humidity < H.dangerLow) {
+        /* < 50% — critically dry */
+        const ratio  = Math.min((H.dangerLow - humidity) / 20, 1);
+        const height = 15 + ratio * 45;
+        const a1     = 0.50 + ratio * 0.30;
+        const a2     = 0.20 + ratio * 0.18;
+        const bA     = 0.80 + ratio * 0.20;
+        const bW     = Math.round(4 + ratio * 4);
+        humidEdge.dataset.anim = 'edgePulseDry';
+        applyEdge(humidEdge,
+            `linear-gradient(to top, rgba(248,113,113,${a1}) 0%, rgba(248,113,113,${a2}) 35%, rgba(239,68,68,${a2*0.4}) 65%, transparent 100%)`,
+            `0 -${bW}px 0 0`, `rgba(248,113,113,${bA})`,
+            height, true
         );
 
     } else if (humidity < H.recLow) {
-        const ratio  = Math.min((H.recLow - humidity) / 20, 1);
-        const height = 12 + ratio * 45;
-        const a1     = 0.28 + ratio * 0.50;
-        const a2     = 0.10 + ratio * 0.28;
-        const bA     = 0.60 + ratio * 0.40;
-        const bW     = Math.round(2 + ratio * 4);
+        /* 50–64% — warning dry */
+        const ratio  = Math.min((H.recLow - humidity) / (H.recLow - H.dangerLow), 1);
+        const height = 10 + ratio * 18;
+        const a1     = 0.22 + ratio * 0.22;
+        const a2     = 0.07 + ratio * 0.10;
+        const bA     = 0.42 + ratio * 0.28;
+        const bW     = Math.round(2 + ratio * 2);
         humidEdge.dataset.anim = 'edgePulseDry';
         applyEdge(humidEdge,
             `linear-gradient(to top, rgba(251,191,36,${a1}) 0%, rgba(251,191,36,${a2}) 35%, rgba(245,158,11,${a2*0.4}) 65%, transparent 100%)`,
             `0 -${bW}px 0 0`, `rgba(251,191,36,${bA})`,
-            height, humidity < H.dangerLow
+            height, false
         );
 
     } else if (humidity >= H.recLow && humidity <= H.recHigh) {
